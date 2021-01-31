@@ -1,36 +1,106 @@
 package com.github.jinahya.prisonersdilemma;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
-import java.util.Map;
-
 public interface Context {
 
-    // --------------------------------------------------------------------------------------------------------- payoffs
-    @NotNull Map<@NotNull Payoff, @Positive Integer> getPayoffs();
-
-    // ----------------------------------------------------------------------------------------------------------- games
+    // -----------------------------------------------------------------------------------------------------------------
 
     /**
-     * Returns the total number of games of current match.
+     * Returns the rule of current game.
      *
-     * @return total number of games of current match.
+     * @return the rule of current game.
      */
-    @Positive int getTotalNumberOfGames();
+    @Valid @NotNull Rule getRule();
+
+    // -----------------------------------------------------------------------------------------------------------------
 
     /**
      * Returns the current game number in current match.
      *
      * @return current game number in current match.
      */
-    @PositiveOrZero int getCurrentGameNumber();
+    @PositiveOrZero int getCurrentIteration();
 
-    default @PositiveOrZero int getRemainingNumberOfGames() {
-        return getTotalNumberOfGames() - getCurrentGameNumber();
+    default boolean isFirstIteration() {
+        return getCurrentIteration() == 0;
+    }
+
+    default boolean isLastIteration() {
+        return getRule().getTotalIterations() == getCurrentIteration() + 1;
+    }
+
+    /**
+     * Returns the remaining iterations excluding current iteration.
+     *
+     * @return the remaining iterations.
+     */
+    default @PositiveOrZero int getRemainingIterations() {
+        return getRule().getTotalIterations() - getCurrentIteration();
     }
 
     // -----------------------------------------------------------------------------------------------------------------
-    Decision getDecisionAt(@Positive int rounds);
+
+    /**
+     * Returns prisoner's all decisions made before this iteration.
+     *
+     * @return prisoner's all decisions made before this iteration.
+     */
+    Iterable<Decision> getPrisonerDecisions();
+
+    /**
+     * Returns prisoner's decision before specified iterations.
+     *
+     * @param iterations the iterations.
+     * @return prisoner's decision before specified iterations.
+     * @throws IllegalArgumentException if {@code iterations} is greater than {@link #getCurrentIteration()}.
+     */
+    Decision getPrisonerDecisionBefore(@Positive final int iterations);
+
+    /**
+     * Returns prisoner's previous decision.
+     *
+     * @return prisoner's previous decision.
+     * @throws IllegalStateException if this iteration is the {@link #isFirstIteration() first} iteration.
+     */
+    default Decision getPrisonerPreviousDecision() {
+        if (isFirstIteration()) {
+            throw new IllegalStateException("no previous decisions");
+        }
+        return getPrisonerDecisionBefore(1);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Returns opponent's all decisions made before this iteration.
+     *
+     * @return opponent's all decisions made before this iteration.
+     */
+    Iterable<Decision> getOpponentDecisions();
+
+    /**
+     * Returns opponent's decision before specified iterations.
+     *
+     * @param iterations the iterations.
+     * @return opponent's decision before specified iterations.
+     * @throws IllegalArgumentException if {@code iterations} is greater than {@link #getCurrentIteration()}.
+     */
+    Decision getOpponentDecisionBefore(@Positive int iterations);
+
+    /**
+     * Returns opponent's previous decision.
+     *
+     * @return opponent's previous decision.
+     * @throws IllegalStateException if this iteration is the {@link #isFirstIteration() first} iteration.
+     */
+    default Decision getOpponentPreviousDecision() {
+        if (isFirstIteration()) {
+            throw new IllegalStateException("no previous decisions");
+        }
+        return getOpponentDecisionBefore(1);
+    }
 }
